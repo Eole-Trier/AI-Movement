@@ -12,6 +12,10 @@ public class PlayerController : MonoBehaviour {
     [SerializeField]
     private Transform PlayerStart = null;
     private Unit unit;
+    private List<Unit> units;
+
+    [SerializeField]
+    private int numberOfUnits;
 
     delegate void InputEventHandler();
     event InputEventHandler OnMouseClicked;
