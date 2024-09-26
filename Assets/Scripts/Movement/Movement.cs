@@ -90,8 +90,8 @@ public class Movement : MonoBehaviour {
         {
             Vector3 force = Vector3.zero;
             force = FollowLeaderForce() + CrowdSeparationForce();
-            //if (IsOnLeaderSight())
-                //force += evade
+            if (IsOnLeaderSight() && !unit.IsLeader)
+                force += EvadeForce();
             steering += force;
         }
         steering = steering.normalized * MaxForce;
@@ -161,6 +161,19 @@ public class Movement : MonoBehaviour {
         force = force.normalized;
         force *= MaxSeparation;
         return force;
+    }
+
+    private Vector3 EvadeForce()
+    {
+        Vector3 dist = Leader.transform.position - transform.position;
+        float updatesAhead = dist.magnitude / MaxSpeed;
+        Vector3 futurePos = transform.position + velocity * updatesAhead;
+        return FleeForce(futurePos);
+    }
+
+    private Vector3 FleeForce(Vector3 position)
+    {
+        return Vector3.zero;
     }
 
     private void OnDrawGizmos()
