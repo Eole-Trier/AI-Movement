@@ -16,6 +16,8 @@ public class Movement : MonoBehaviour {
     private float SeparationRadius = 1f;
     [SerializeField]
     private float MaxSeparation = 2f;
+    [SerializeField]
+    private float LeaderSightRadius = 5f;
 
     public Vector3 velocity = Vector3.zero;
     public float rotation = 0f;
@@ -26,6 +28,7 @@ public class Movement : MonoBehaviour {
     private float distance = 0f;
 
     private Vector3 behind = Vector3.zero;
+    private Vector3 ahead = Vector3.zero;
     [SerializeField]
     private float LeaderBehindDistance;
 
@@ -84,7 +87,13 @@ public class Movement : MonoBehaviour {
         if (unit.IsLeader) 
             steering = desiredVelocity - velocity;
         else
-            steering += FollowLeaderForce() + CrowdSeparationForce();
+        {
+            Vector3 force = Vector3.zero;
+            force = FollowLeaderForce() + CrowdSeparationForce();
+            //if (IsOnLeaderSight())
+                //force += evade
+            steering += force;
+        }
         steering = steering.normalized * MaxForce;
         steering = steering / Mass;
         velocity += steering;
@@ -124,6 +133,12 @@ public class Movement : MonoBehaviour {
         return behind - transform.position;
     }
 
+    private bool IsOnLeaderSight()
+    {
+        return (ahead - transform.position).magnitude <= LeaderSightRadius
+            || (Leader.transform.position - transform.position).magnitude <= LeaderSightRadius;
+    }
+
     private Vector3 CrowdSeparationForce()
     {
         Vector3 force = Vector3.zero;
@@ -133,14 +148,14 @@ public class Movement : MonoBehaviour {
             if (unit != this && (unit.transform.position - transform.position).magnitude < SeparationRadius)
             {
                 force.x += unit.transform.position.x - transform.position.x;
-                force.y += unit.transform.position.y - transform.position.y;
+                force.z += unit.transform.position.z - transform.position.z;
                 neighborCount++;    
             }
         }
         if (neighborCount != 0)
         {
             force.x /= neighborCount;
-            force.y /= neighborCount;
+            force.z /= neighborCount;
             force *= (-1);
         }
         force = force.normalized;
