@@ -11,15 +11,23 @@ public class Movement : MonoBehaviour {
     [SerializeField]
     private float Mass = 1f;
     [SerializeField]
-    private float SlowingRadius = 1f;
+    private float SlowingRadius = 1f; 
+    [SerializeField]
+    private float SeparationRadius = 1f;
+    [SerializeField]
+    private float MaxSeparation = 2f;
 
-    private Vector3 velocity = Vector3.zero;
-    private float rotation = 0f;
+    public Vector3 velocity = Vector3.zero;
+    public float rotation = 0f;
 
-    private Vector3 desiredVelocity = Vector3.zero;
-    private Vector3 steering = Vector3.zero;
+    public Vector3 desiredVelocity = Vector3.zero;
+    public Vector3 steering = Vector3.zero;
 
     private float distance = 0f;
+
+    private Vector3 behind = Vector3.zero;
+    [SerializeField]
+    private float LeaderBehindDistance;
 
     private float posOffsetY = 0.5f;
     private Vector3 targetPos;
@@ -29,8 +37,14 @@ public class Movement : MonoBehaviour {
         set { targetPos = value; targetPos.y += posOffsetY; }
     }
 
+    private Unit unit;
+    public Unit Leader;
+    public PlayerController PlayerController;
+
     private void Start()
     {
+        unit = GetComponent<Unit>();
+        PlayerController = FindObjectOfType<PlayerController>();
         targetPos = transform.position;
     }
 
@@ -67,8 +81,10 @@ public class Movement : MonoBehaviour {
             desiredVelocity = desiredVelocity.normalized * MaxSpeed;
         }
         // Set the steering based on this 
-        steering = desiredVelocity - velocity;
-
+        if (unit.IsLeader) 
+            steering = desiredVelocity - velocity;
+        else
+            steering += FollowLeaderForce() + CrowdSeparationForce();
         steering = steering.normalized * MaxForce;
         steering = steering / Mass;
         velocity += steering;
@@ -80,8 +96,10 @@ public class Movement : MonoBehaviour {
 		{
 			velocity.Normalize();
             velocity *= MaxSpeed;
-            // steering 
-            
+        }
+        if (Leader.Movement.desiredVelocity.magnitude < 0.1f)
+        {
+            velocity = Vector3.zero;
         }
         // If (velocity + steering) equals zero, then there is no movement 
        
@@ -97,6 +115,38 @@ public class Movement : MonoBehaviour {
   //          transform.position = hitInfo.point + Vector3.up * posOffsetY;
   //      }
 	}
+
+    private Vector3 FollowLeaderForce()
+    {
+        Vector3 tv = Leader.Movement.velocity * -1;
+        tv = tv.normalized * LeaderBehindDistance;
+        behind = Leader.transform.position + tv;
+        return behind - transform.position;
+    }
+
+    private Vector3 CrowdSeparationForce()
+    {
+        Vector3 force = Vector3.zero;
+        int neighborCount = 0;
+        foreach (Unit unit in PlayerController.Units)
+        {
+            if (unit != this && (unit.transform.position - transform.position).magnitude < SeparationRadius)
+            {
+                force.x += unit.transform.position.x - transform.position.x;
+                force.y += unit.transform.position.y - transform.position.y;
+                neighborCount++;    
+            }
+        }
+        if (neighborCount != 0)
+        {
+            force.x /= neighborCount;
+            force.y /= neighborCount;
+            force *= (-1);
+        }
+        force = force.normalized;
+        force *= MaxSeparation;
+        return force;
+    }
 
     private void OnDrawGizmos()
 	{

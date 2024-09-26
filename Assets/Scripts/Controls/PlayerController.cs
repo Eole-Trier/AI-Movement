@@ -11,8 +11,7 @@ public class PlayerController : MonoBehaviour {
     private GameObject UnitPrefab = null;
     [SerializeField]
     private Transform PlayerStart = null;
-    private Unit unit;
-    private List<Unit> units;
+    public List<Unit> Units;
 
     [SerializeField]
     private int numberOfUnits;
@@ -31,20 +30,29 @@ public class PlayerController : MonoBehaviour {
     // Use this for initialization
     private void Start ()
     {
+        Units = new List<Unit>();
         if (UnitPrefab)
         {
-            GameObject unitInst = Instantiate(UnitPrefab, PlayerStart, false);
-            unitInst.transform.parent = null;
-            unit = unitInst.GetComponent<Unit>();
-
-            RaycastHit raycastInfo;
-            Ray ray = new Ray(unitInst.transform.position, Vector3.down);
-            if (Physics.Raycast(ray, out raycastInfo, 10f, 1 << LayerMask.NameToLayer("Floor")))
+            for (int i = 0; i < numberOfUnits; i++)
             {
-                unitInst.transform.position = raycastInfo.point;
-            }
+                GameObject unitInst = Instantiate(UnitPrefab, PlayerStart, false);
+                unitInst.transform.parent = null;
+                unitInst.transform.localPosition += new Vector3(2 * i, 0, 0);
+                Units.Add(unitInst.GetComponent<Unit>());
+                RaycastHit raycastInfo;
+                Ray ray = new Ray(unitInst.transform.position, Vector3.down);
+                if (Physics.Raycast(ray, out raycastInfo, 10f, 1 << LayerMask.NameToLayer("Floor")))
+                {
+                    unitInst.transform.position = raycastInfo.point;
+                }
 
-            unit.SetSelected(true);
+                Units[i].SetSelected(true);
+            }
+            Units[0].IsLeader = true;
+            for (int i = 0; i < numberOfUnits; i++)
+            {
+                Units[i].Movement.Leader = Units[0];
+            }
         }
 
         OnMouseClicked += () =>
@@ -62,7 +70,10 @@ public class PlayerController : MonoBehaviour {
 
                 if (TileNavGraph.Instance.IsPosValid(newPos))
                 {
-                    unit.SetTargetPos(newPos);
+                    foreach (Unit unit in Units)
+                    {
+                        unit.SetTargetPos(newPos);
+                    }
                 }
             }
         };

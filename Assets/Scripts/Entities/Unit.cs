@@ -3,17 +3,18 @@ using System.Collections;
 
 public class Unit : SelectableEntity
 {
-    private Movement movement;
+    public Movement Movement;
+    public bool IsLeader = false;
 
     // Use this for initialization
     override protected void Awake()
     {
         base.Awake();
-        movement = GetComponent<Movement>();
+        Movement = GetComponent<Movement>();
 	}
 
     public void SetTargetPos(Vector3 pos)
     {
-        movement.TargetPos = pos;
+        Movement.TargetPos = pos;
     }
 }
