@@ -69,6 +69,8 @@ namespace Navigation
 
         private Unit unit;
 
+        private bool initAStar = true;
+
 #region Monobehavior
         private void Awake ()
         {
@@ -80,6 +82,7 @@ namespace Navigation
             RecomputeGraph = false;
             StartCreatingGraph();
             StartNode = GetNode(StartPosition.transform.position);
+            AStar();
         }
 
         private void Update()
@@ -90,8 +93,12 @@ namespace Navigation
                 ClearGridAndGraph();
                 CreateTiledGrid();
                 StartCreatingGraph();
-                AStar();
                 RecomputeGraph = false;
+            }
+            if (initAStar)
+            {
+                AStar();
+                initAStar = false;
             }
         }
 #endregion
@@ -361,10 +368,7 @@ namespace Navigation
                     while (node.Parent != null)
                     {
                         Gizmos.color = Color.black;
-                        Debug.Log(node.Position);
-                        Debug.Log(node.Parent.Position);
                         Gizmos.DrawLine(node.Position, node.Parent.Position);
-
                         node = node.Parent;
                     }
                 }
