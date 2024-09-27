@@ -16,6 +16,11 @@ namespace Navigation
     {
         public Vector3 Position = Vector3.zero;
         public int Weight = 0;
+        public bool IsObstacle = false;
+        public bool IsVisited = false;
+        public float GlobalGoal = 0f;
+        public float LocalGoal = 0f;
+        public Node Parent = null;
     }
 
     public class Connection

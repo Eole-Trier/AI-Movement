@@ -1,6 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
 using System.Threading;
+using System.Linq;
+using UnityEditor.Experimental.GraphView;
+using System;
+using UnityEngine.UIElements;
 
 namespace Navigation
 {
@@ -55,6 +59,16 @@ namespace Navigation
         // threading
         Thread GraphThread = null;
 
+        // own part
+
+        [SerializeField]
+        private GameObject StartPosition;
+
+        private Node StartNode;
+        private Node GoalNode;
+
+        private Unit unit;
+
 #region Monobehavior
         private void Awake ()
         {
@@ -65,15 +79,18 @@ namespace Navigation
         {
             RecomputeGraph = false;
             StartCreatingGraph();
+            StartNode = GetNode(StartPosition.transform.position);
         }
 
         private void Update()
         {
+            GoalNode = GetNode(FindObjectOfType<Unit>().Movement.TargetPos);
             if (RecomputeGraph)
             {
                 ClearGridAndGraph();
                 CreateTiledGrid();
                 StartCreatingGraph();
+                AStar();
                 RecomputeGraph = false;
             }
         }
@@ -86,14 +103,60 @@ namespace Navigation
             GraphThread.Start();
         }
 
-        // Create all nodes for the tiled grid
-        private void CreateTiledGrid()
+        private void AStar()
+        {
+            foreach (Node node in LNode)
+            {
+                node.IsVisited = false;
+                node.GlobalGoal = Mathf.Infinity;
+                node.LocalGoal = Mathf.Infinity;
+                node.Parent = null;
+            }
+
+            Node currentNode = StartNode;
+            StartNode.LocalGoal = 0f;
+            StartNode.GlobalGoal = Heuristic(StartNode, GoalNode);
+
+            List<Node> notTestedNodes = new List<Node>();
+            notTestedNodes.Add(StartNode);
+
+            while (notTestedNodes.Count != 0)
+            {
+                notTestedNodes.Sort((x, y) => x.GlobalGoal < y.GlobalGoal ? -1 : 1);
+                while (notTestedNodes.Count != 0 && notTestedNodes.First().IsVisited)
+                {
+                    notTestedNodes.Remove(notTestedNodes.First());
+                }
+                if (notTestedNodes.Count == 0)
+                    break;
+                 
+                currentNode = notTestedNodes.First();
+                currentNode.IsVisited = true;
+
+                foreach (Node neighbour in GetNeighbours(currentNode))
+                {
+                    if (!neighbour.IsVisited && !neighbour.IsObstacle)
+                        notTestedNodes.Add((neighbour));
+
+                    float possiblyLowerGoal = currentNode.GlobalGoal + (neighbour.Position - currentNode.Position).magnitude;
+                    if (possiblyLowerGoal < neighbour.LocalGoal)
+                    {
+                        neighbour.Parent = currentNode;
+                        neighbour.LocalGoal = possiblyLowerGoal;
+                        neighbour.GlobalGoal = neighbour.LocalGoal + Heuristic(neighbour, GoalNode);
+                    }
+                }
+            }
+        }
+
+    // Create all nodes for the tiled grid
+    private void CreateTiledGrid()
 	    {
 		    LNode.Clear();
 
             gridStartPos = transform.position + new Vector3(- GridSizeH / 2f, 0f, - GridSizeV / 2f);
 
-		    NbTilesH = GridSizeH / SquareSize;
+            NbTilesH = GridSizeH / SquareSize;
 		    NbTilesV = GridSizeV / SquareSize;
 
 		    for(int i = 0; i < NbTilesV; i++)
@@ -158,6 +221,8 @@ namespace Navigation
                         ConnectionsGraph[node].Add(connection);
                     }
                 }
+                else
+                    node.IsObstacle = true;
             }
         }
 
@@ -252,6 +317,11 @@ namespace Navigation
 		    return nodes;
 	    }
 
+        private float Heuristic(Node n1, Node n2)
+        {
+            return (n2.Position - n1.Position).magnitude;
+        }
+
 #region Gizmos
         private void OnDrawGizmos()
 	    {
@@ -280,6 +350,25 @@ namespace Navigation
                     Gizmos.color = IsNodeWalkable(node) ? Color.green : Color.red;
                     Gizmos.DrawCube(node.Position, Vector3.one * 0.25f);
 		        }
+                Gizmos.color = Color.black;
+                Gizmos.DrawCube(StartNode.Position, Vector3.one * 0.25f);
+                if (GoalNode != null)
+                {
+                    Gizmos.color = Color.blue;
+                    Gizmos.DrawCube(GoalNode.Position, Vector3.one * 0.25f);
+
+                    Node node = GoalNode;
+                    while (node.Parent != null)
+                    {
+                        Gizmos.color = Color.black;
+                        Debug.Log(node.Position);
+                        Debug.Log(node.Parent.Position);
+                        Gizmos.DrawLine(node.Position, node.Parent.Position);
+
+                        node = node.Parent;
+                    }
+                }
+                
             }
             if (DisplayAllLinks)
             {
